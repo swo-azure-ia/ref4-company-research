@@ -5,6 +5,8 @@ import time
 import json
 import jwt
 import openai
+from dotenv import load_dotenv
+from os.path import dirname, join
 from flask import Flask, request, jsonify, render_template
 from azure.identity import DefaultAzureCredential
 from redis import StrictRedis
@@ -14,12 +16,16 @@ import traceback
 # Company
 from company_research.company import CompanyResearch
 
+dotenv_path = join(dirname(__file__), ".env")
+load_dotenv(dotenv_path)
+
 # Davinci, ChatGPT
 AZURE_OPENAI_SERVICE = os.environ.get("AZURE_OPENAI_SERVICE")
 AZURE_OPENAI_API_VERSION = os.environ.get("AZURE_OPENAI_API_VERSION")
 AZURE_OPENAI_COMPLETION_DEPLOYMENT = os.environ.get("AZURE_OPENAI_COMPLETION_DEPLOYMENT")
 AZURE_OPENAI_CHAT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_CHAT_DEPLOYMENT")
 AZURE_OPENAI_EMBEDDING_DEPLOYMENT = os.environ.get("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
 
 # Redis
 # TODO: This part used to be "REDIS_NAME = os.environ["REDIS_NAME"]" check why
@@ -30,7 +36,8 @@ REDIS_INDEX_NAME = os.environ.get("REDIS_INDEX_NAME")
 REDIS_CATEGORY_COMMON = os.environ.get("REDIS_CATEGORY_COMMON")
 REDIS_CATEGORY_TOPICS = os.environ.get("REDIS_CATEGORY_TOPICS")
 
-redis_client = StrictRedis(host=REDIS_NAME, port=10000, password=REDIS_KEY, ssl=True, ssl_cert_reqs=None, decode_responses=True)
+# redis_client = StrictRedis(host=REDIS_NAME, port=10000, password=REDIS_KEY, ssl=True, ssl_cert_reqs=None, decode_responses=True)
+redis_client = StrictRedis(host=REDIS_NAME, port=6379, password=REDIS_KEY, decode_responses=True)
 
 # Use the current user identity to authenticate with Azure OpenAI, Cognitive Search and Blob Storage (no secrets needed, 
 # just use 'az login' locally, and managed identity when deployed on Azure). If you need to use keys, use separate AzureKeyCredential instances with the 
@@ -38,15 +45,28 @@ redis_client = StrictRedis(host=REDIS_NAME, port=10000, password=REDIS_KEY, ssl=
 # If you encounter a blocking error during a DefaultAzureCredntial resolution, you can exclude the problematic credential by using a parameter (ex. exclude_shared_token_cache_credential=True)
 azure_credential = DefaultAzureCredential()
 
-# Used by the OpenAI SDK
-openai.api_type = "azure"
-openai.api_base = f"https://{AZURE_OPENAI_SERVICE}.openai.azure.com"
-openai.api_version = AZURE_OPENAI_API_VERSION
+# # Used by the OpenAI SDK
+# openai.api_type = "azure"
+# openai.api_base = f"https://{AZURE_OPENAI_SERVICE}.openai.azure.com"
+# openai.api_version = AZURE_OPENAI_API_VERSION
 
-# Comment these two lines out if using keys, set your API key in the OPENAI_API_KEY environment variable instead
-openai.api_type = "azure_ad"
-openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
-openai.api_key = openai_token.token
+# # Comment these two lines out if using keys, set your API key in the OPENAI_API_KEY environment variable instead
+# openai.api_type = "azure_ad"
+# openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
+# openai.api_key = openai_token.token
+
+openai.api_base = AZURE_OPENAI_SERVICE
+openai.api_version = AZURE_OPENAI_API_VERSION
+azure_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
+
+if AZURE_OPENAI_API_KEY is None:
+    openai.api_type = "azure_ad"
+    openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
+    openai.api_key = openai_token.token
+else:
+    openai.api_type = "azure"
+    openai.api_key = AZURE_OPENAI_API_KEY
+
 
 # Redis Index Name
 def get_redis_index_name(category):
@@ -183,10 +203,11 @@ def static_file(path):
 
 def ensure_openai_token():
     print(f"I'm in function: {inspect.currentframe().f_code.co_name}")
-    global openai_token
-    if openai_token or openai_token.expires_on < int(time.time()) - 60:
-        openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
-        openai.api_key = openai_token.token
+    # global openai_token
+    # if openai_token or openai_token.expires_on < int(time.time()) - 60:
+    #     # openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
+    #     # openai.api_key = openai_token.token
+    #     openai.api_key = AZURE_OPENAI_API_KEY
     
 if __name__ == "__main__":
     app.run()

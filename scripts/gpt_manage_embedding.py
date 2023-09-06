@@ -28,14 +28,27 @@ load_dotenv(dotenv_path)
 AZURE_OPENAI_SERVICE = os.environ.get("AZURE_OPENAI_SERVICE")
 AZURE_OPENAI_VERSION = os.environ.get("AZURE_OPENAI_VERSION")
 AZURE_OPENAI_EMBEDDING_DEPLOYMENT = os.environ.get("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY")
 
+# openai.api_type = "azure_ad"
+# openai.api_base = AZURE_OPENAI_SERVICE
+# openai.api_version = AZURE_OPENAI_VERSION
+# # azure_credential = DefaultAzureCredential()
+# azure_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
+# openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
+# openai.api_key = openai_token.token
 
-openai.api_type = "azure_ad"
 openai.api_base = AZURE_OPENAI_SERVICE
 openai.api_version = AZURE_OPENAI_VERSION
-azure_credential = DefaultAzureCredential()
-openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
-openai.api_key = openai_token.token
+azure_credential = DefaultAzureCredential(exclude_shared_token_cache_credential=True)
+
+if AZURE_OPENAI_API_KEY is None:
+    openai.api_type = "azure_ad"
+    openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
+    openai.api_key = openai_token.token
+else:
+    openai.api_type = "azure"
+    openai.api_key = AZURE_OPENAI_API_KEY
 
 max_token = 2000
 
@@ -47,7 +60,8 @@ REDIS_INDEX_NAME = os.environ.get("REDIS_INDEX_NAME")
 REDIS_CATEGORY_COMMON = os.environ.get("REDIS_CATEGORY_COMMON")
 REDIS_CATEGORY_TOPICS = os.environ.get("REDIS_CATEGORY_TOPICS")
 
-redis_conn = StrictRedis(host=REDIS_NAME, port=10000, password=REDIS_KEY, ssl=True, ssl_cert_reqs=None, decode_responses=True)
+# redis_conn = StrictRedis(host=REDIS_NAME, port=10000, password=REDIS_KEY, ssl=True, ssl_cert_reqs=None, decode_responses=True)
+redis_conn = StrictRedis(host=REDIS_NAME, port=6379, password=REDIS_KEY, decode_responses=True)
 
 # encoding for tokenization
 encodeing = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -181,9 +195,9 @@ def register_company_topics(category, filename):
             print(line)
             data = json.loads(line)
 
-            azure_credential = DefaultAzureCredential()
-            openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
-            openai.api_key = openai_token.token
+            # azure_credential = DefaultAzureCredential()
+            # openai_token = azure_credential.get_token("https://cognitiveservices.azure.com/.default")
+            # openai.api_key = openai_token.token
 
             register_embedding_cache(category, data, data["keyword"])
             time.sleep(60)
