@@ -1,0 +1,45 @@
+name: Trigger auto deployment for ref4-company-research
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - 'app/**'
+    - '.github/workflows/ref4-company-research-AutoDeployTrigger-758021c0-16b8-4537-8953-5362fc3814fe.yml'
+
+  # Allow mannually trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.REF4COMPANYRESEARCH_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.REF4COMPANYRESEARCH_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.REF4COMPANYRESEARCH_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }}/app 
+          registryUrl: swoaidemoregistry.azurecr.io
+          registryUsername: ${{ secrets.REF4COMPANYRESEARCH_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.REF4COMPANYRESEARCH_REGISTRY_PASSWORD }}
+          containerAppName: ref4-company-research
+          resourceGroup: aoai_refer_art_rg
+          imageToBuild: swoaidemoregistry.azurecr.io/ref4-company-research:${{ github.sha }}
+          dockerfilePath: Dockerfile
+
+
