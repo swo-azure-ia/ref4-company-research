@@ -4,24 +4,64 @@ name: Trigger auto deployment for ref4-company-research
 on:
   # Automatically trigger it when detected changes in repo
   push:
-    branches: 
-      [ main ]
+    branches: [main]
     paths:
-    - 'app/**'
-    - '.github/workflows/ref4-company-research-AutoDeployTrigger-758021c0-16b8-4537-8953-5362fc3814fe.yml'
+      - "app/**"
+      - ".github/workflows/ref4-company-research-AutoDeployTrigger-758021c0-16b8-4537-8953-5362fc3814fe.yml"
 
-  # Allow mannually trigger 
-  workflow_dispatch:      
+  # Allow mannually trigger
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions: 
+    permissions:
       id-token: write #This is required for requesting the OIDC JWT Token
 
     steps:
       - name: Checkout to the branch
         uses: actions/checkout@v2
+
+      - name: Create and populate .env file
+        env:
+          AZURE_OPENAI_SERVICE: ${{ secrets.AZURE_OPENAI_SERVICE }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_COMPLETION_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_COMPLETION_DEPLOYMENT }}
+          AZURE_OPENAI_CHAT_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}
+          AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
+          REDIS_NAME: ${{ secrets.REDIS_NAME }}
+          REDIS_KEY: ${{ secrets.REDIS_KEY }}
+          BASIC_AUTH_USER: ${{ secrets.BASIC_AUTH_USER }}
+          BASIC_AUTH_PASSWORD: ${{ secrets.BASIC_AUTH_PASSWORD }}
+        run: |
+          touch .env
+          echo AZURE_OPENAI_API_TYPE="azure" >> .env
+          echo AZURE_OPENAI_SERVICE="$AZURE_OPENAI_SERVICE" >> .env
+          echo AZURE_OPENAI_API_KEY="$AZURE_OPENAI_API_KEY" >> .env
+          echo AZURE_OPENAI_API_VERSION="2023-05-15" >> .env
+          echo AZURE_OPENAI_COMPLETION_DEPLOYMENT="$AZURE_OPENAI_COMPLETION_DEPLOYMENT" >> .env
+          echo AZURE_OPENAI_CHAT_DEPLOYMENT="$AZURE_OPENAI_CHAT_DEPLOYMENT" >> .env
+          echo AZURE_OPENAI_EMBEDDING_DEPLOYMENT="$AZURE_OPENAI_EMBEDDING_DEPLOYMENT" >> .env
+          echo REDIS_NAME="$REDIS_NAME" >> .env
+          echo REDIS_KEY="$REDIS_KEY" >> .env
+          echo REDIS_CATEGORY_COMMON="company_common" >> .env
+          echo REDIS_CATEGORY_TOPICS="company_topics" >> .env
+          echo REDIS_INDEX_NAME="embedding_index" >> .env
+          echo BASIC_AUTH_USER="$BASIC_AUTH_USER" >> .env
+          echo BASIC_AUTH_PASSWORD="$BASIC_AUTH_PASSWORD" >> .env
+
+          echo "cat .env"
+          cat .env
+
+          echo "ls -a ."
+          ls -a .
+
+          echo "Move .env file to backend folder"
+          mv .env app/backend/
+
+          echo "ls -a ${{ github.workspace }}"
+          ls -a ${{ github.workspace }}
+        shell: bash
 
       - name: Azure Login
         uses: azure/login@v1
@@ -33,7 +73,7 @@ jobs:
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v1
         with:
-          appSourcePath: ${{ github.workspace }}/app 
+          appSourcePath: ${{ github.workspace }}/app
           registryUrl: swoaidemoregistry.azurecr.io
           registryUsername: ${{ secrets.REF4COMPANYRESEARCH_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.REF4COMPANYRESEARCH_REGISTRY_PASSWORD }}
@@ -41,5 +81,3 @@ jobs:
           resourceGroup: aoai_refer_art_rg
           imageToBuild: swoaidemoregistry.azurecr.io/ref4-company-research:${{ github.sha }}
           dockerfilePath: Dockerfile
-
-
