@@ -31,8 +31,6 @@ jobs:
           AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
           REDIS_NAME: ${{ secrets.REDIS_NAME }}
           REDIS_KEY: ${{ secrets.REDIS_KEY }}
-          BASIC_AUTH_USER: ${{ secrets.BASIC_AUTH_USER }}
-          BASIC_AUTH_PASSWORD: ${{ secrets.BASIC_AUTH_PASSWORD }}
         run: |
           touch .env
           echo AZURE_OPENAI_API_TYPE="azure" >> .env
@@ -47,8 +45,6 @@ jobs:
           echo REDIS_CATEGORY_COMMON="company_common" >> .env
           echo REDIS_CATEGORY_TOPICS="company_topics" >> .env
           echo REDIS_INDEX_NAME="embedding_index" >> .env
-          echo BASIC_AUTH_USER="$BASIC_AUTH_USER" >> .env
-          echo BASIC_AUTH_PASSWORD="$BASIC_AUTH_PASSWORD" >> .env
 
           echo "cat .env"
           cat .env

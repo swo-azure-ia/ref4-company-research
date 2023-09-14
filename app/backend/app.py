@@ -13,8 +13,6 @@ from redis import StrictRedis
 import inspect
 import traceback
 
-from flask_httpauth import HTTPBasicAuth
-from werkzeug.security import generate_password_hash, check_password_hash
 
 # Company
 from company_research.company import CompanyResearch
@@ -86,21 +84,6 @@ company_research = CompanyResearch(
 
 app = Flask(__name__)
 
-auth = HTTPBasicAuth()
-
-# Basic auth user
-BASIC_AUTH_USER = os.environ.get("BASIC_AUTH_USER")
-BASIC_AUTH_PASSWORD = os.environ.get("BASIC_AUTH_PASSWORD")
-users = {
-    BASIC_AUTH_USER: generate_password_hash(BASIC_AUTH_PASSWORD)
-}
-
-
-@auth.verify_password
-def verify_password(username, password):
-    if username in users and \
-            check_password_hash(users.get(username), password):
-        return username
 
 def get_user_name(req: request):
     print(f"I'm in function: {inspect.currentframe().f_code.co_name}")
@@ -121,7 +104,6 @@ def get_user_name(req: request):
 # Web Page
 @app.route("/")
 @app.route("/company_chat")
-@auth.login_required
 def index():
     print(f"I'm in function: {inspect.currentframe().f_code.co_name}")
     user_name = get_user_name(request)
@@ -134,7 +116,6 @@ def favicon():
     return {}, 404
 
 @app.route("/<page>")
-@auth.login_required
 def company_info(page):
     print(f"I'm in function: {inspect.currentframe().f_code.co_name}")
     user_name = get_user_name(request)
@@ -142,7 +123,6 @@ def company_info(page):
 
 # Web API
 @app.route("/search_company", methods=["POST"])
-@auth.login_required
 def search_company():
     print(f"I'm in function: {inspect.currentframe().f_code.co_name}")
     try:
@@ -160,7 +140,6 @@ def search_company():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/company_chat", methods=["POST"])
-@auth.login_required
 def company_chat():
     print(f"I'm in function: {inspect.currentframe().f_code.co_name}")
     try:
@@ -180,7 +159,6 @@ def company_chat():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/company_completion", methods=["POST"])
-@auth.login_required
 def company_completion():
     print(f"I'm in function: {inspect.currentframe().f_code.co_name}")
     try:
@@ -200,7 +178,6 @@ def company_completion():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/analysis_feedback", methods=["POST"])
-@auth.login_required
 def analysis_feedback():
     print(f"I'm in function: {inspect.currentframe().f_code.co_name}")
     try:
@@ -222,7 +199,6 @@ def analysis_feedback():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/<path:path>")
-@auth.login_required
 def static_file(path):
     print(f"I'm in function: {inspect.currentframe().f_code.co_name}")
     return app.send_static_file(path)
